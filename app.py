@@ -15,7 +15,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Load model from expected path
 MODEL_PATH = 'model/model.h5'
 if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError("❌ model.h5 not found at 'model/model.h5'. Check preDeployCommand or file path.")
+    raise FileNotFoundError("model.h5 not found at 'model/model.h5'. Check preDeployCommand or file path.")
 
 model = load_model(MODEL_PATH)
 
