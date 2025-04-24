@@ -1,53 +1,58 @@
-import os
-from flask import Flask, render_template, request
-from werkzeug.utils import secure_filename
+from flask import Flask, request, jsonify, render_template
+from keras.models import load_model
 import numpy as np
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
+import os
+import requests
+from PIL import Image
+import io
 
-# Create 'uploads' folder if it doesn't exist
-if not os.path.exists('uploads'):
-    os.makedirs('uploads')
-
-# Initialize Flask app
 app = Flask(__name__)
 
-# Load your trained model (assumes model.h5 is in the same directory as app.py)
-model = load_model('model.h5')
+MODEL_PATH = "model.h5"
+MODEL_URL = "https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5"
 
+# 🔽 Download model if it's not already present
+if not os.path.exists(MODEL_PATH):
+    print("🔄 Downloading model.h5...")
+    with open(MODEL_PATH, "wb") as f:
+        f.write(requests.get(MODEL_URL).content)
+    print("✅ model.h5 downloaded!")
+
+# ✅ Load model
+print("📦 Loading model...")
+model = load_model(MODEL_PATH)
+print("🚀 Model loaded successfully!")
+
+# 🔍 Preprocessing helper
+def preprocess_image(image):
+    img = image.resize((150, 150))  # Adjust to match your model's expected size
+    img = np.array(img) / 255.0
+    img = img.reshape(1, 150, 150, 3)
+    return img
+
+# 🏠 Home route
 @app.route('/')
-def index():
+def home():
     return render_template('index.html')
 
+# 📤 Prediction route
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'file' not in request.files:
-        return 'No file uploaded', 400
+        return jsonify({'error': 'No file uploaded.'})
     
     file = request.files['file']
-
     if file.filename == '':
-        return 'No file selected', 400
-
-    if file:
-        filename = secure_filename(file.filename)
-        file_path = os.path.join('uploads', filename)
-        file.save(file_path)
-
-        # Load and preprocess the image
-        img = image.load_img(file_path, target_size=(224, 224))  # adjust size as per your model input
-        img_array = image.img_to_array(img)
-        img_array = np.expand_dims(img_array, axis=0)
-        img_array = img_array / 255.0  # normalize if model was trained this way
-
-        # Predict using the model
-        prediction = model.predict(img_array)
-
-        # Assuming binary classification — 1 for Tumor, 0 for No Tumor
-        result = 'Tumor Detected' if prediction[0][0] > 0.5 else 'No Tumor Detected'
-        return result
-
-    return 'File processing error', 500
+        return jsonify({'error': 'No selected file.'})
+    
+    try:
+        image = Image.open(io.BytesIO(file.read()))
+        processed_image = preprocess_image(image)
+        prediction = model.predict(processed_image)
+        result = "Tumor Detected" if prediction[0][0] > 0.5 else "No Tumor Detected"
+        return jsonify({'prediction': result})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True)
