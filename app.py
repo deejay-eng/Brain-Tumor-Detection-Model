@@ -1,46 +1,53 @@
 import os
-from flask import Flask, render_template, request
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+import requests
+from flask import Flask, request, jsonify, render_template
+from keras.models import load_model
 import numpy as np
-from werkzeug.utils import secure_filename
+from PIL import Image
 
-app = Flask(__name__)
+app = Flask(_name_)
 
-# Ensure upload folder exists
-UPLOAD_FOLDER = 'static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# Load model from expected path
 MODEL_PATH = 'model/model.h5'
-if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError("model.h5 not found at 'model/model.h5'. Check preDeployCommand or file path.")
+MODEL_URL = 'https://drive.google.com/uc?export=download&id=1JFkLRc-Hzy39KHlrqoR68vOdzwW-_uWh'
 
+# Download model if not present
+if not os.path.exists(MODEL_PATH):
+    os.makedirs('model', exist_ok=True)
+    print("Downloading model...")
+    response = requests.get(MODEL_URL)
+    with open(MODEL_PATH, 'wb') as f:
+        f.write(response.content)
+    print("Model downloaded.")
+
+# Load model
 model = load_model(MODEL_PATH)
 
 @app.route('/')
-def index():
+def home():
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if 'image' not in request.files:
-        return "No image uploaded", 400
+    try:
+        if 'file' not in request.files:
+            return "No file part"
+        
+        file = request.files['file']
+        if file.filename == '':
+            return "No selected file"
+        
+        img = Image.open(file).convert('RGB')
+        img = img.resize((224, 224))  # Update this size as per your model input
+        img_array = np.array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+        
+        prediction = model.predict(img_array)
+        result = prediction.tolist()
+        
+        return jsonify({'prediction': result})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
-    image_file = request.files['image']
-    filename = secure_filename(image_file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    image_file.save(filepath)
-
-    img = load_img(filepath, target_size=(150, 150))
-    img_array = img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-
-    prediction = model.predict(img_array)[0][0]
-    result = 'Tumor Detected' if prediction > 0.5 else 'No Tumor'
-
-    return render_template('result.html', prediction=result, image_path=filepath)
-
-if __name__ == '__main__':
+if _name_ == '_main_':
     app.run(debug=True)
