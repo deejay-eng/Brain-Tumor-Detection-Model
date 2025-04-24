@@ -1,35 +1,23 @@
 import os
-import uuid
-from flask import Flask, render_template, request, redirect, url_for
-from werkzeug.utils import secure_filename
-import numpy as np
+from flask import Flask, render_template, request
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+import numpy as np
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'static/uploads/'
+
+# Ensure upload folder exists
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Create upload folder if it doesn't exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Load the model
+# Load model from expected path
 MODEL_PATH = 'model/model.h5'
 if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError("❌ model.h5 not found at 'model/model.h5'. Make sure it's being downloaded properly.")
+    raise FileNotFoundError("❌ model.h5 not found at 'model/model.h5'. Check preDeployCommand or file path.")
+
 model = load_model(MODEL_PATH)
-print("✅ Model loaded successfully from:", MODEL_PATH)
-
-def predict_tumor(img_path):
-    img = image.load_img(img_path, target_size=(150, 150))
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array /= 255.0
-
-    prediction = model.predict(img_array)[0][0]
-    result = "Tumor Detected" if prediction >= 0.5 else "No Tumor Detected"
-    confidence = round(prediction * 100, 2) if prediction >= 0.5 else round((1 - prediction) * 100, 2)
-    return result, confidence
 
 @app.route('/')
 def index():
@@ -38,21 +26,21 @@ def index():
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'image' not in request.files:
-        return redirect(request.url)
+        return "No image uploaded", 400
 
-    file = request.files['image']
-    if file.filename == '':
-        return redirect(request.url)
+    image_file = request.files['image']
+    filename = secure_filename(image_file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    image_file.save(filepath)
 
-    filename = secure_filename(file.filename)
-    unique_filename = f"{uuid.uuid4()}_{filename}"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-    file.save(filepath)
+    img = load_img(filepath, target_size=(150, 150))
+    img_array = img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
 
-    result, confidence = predict_tumor(filepath)
-    image_path = url_for('static', filename='uploads/' + unique_filename)
-    return render_template('result.html', result=result, confidence=confidence, image_path=image_path)
+    prediction = model.predict(img_array)[0][0]
+    result = 'Tumor Detected' if prediction > 0.5 else 'No Tumor'
+
+    return render_template('result.html', prediction=result, image_path=filepath)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True)
