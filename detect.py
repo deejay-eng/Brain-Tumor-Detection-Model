@@ -21,4 +21,6 @@ def detect(img_path, model, image_size=128):
         return result, confidence_score
 
     except Exception as e:
+        # Print detailed error to the console
+        print(f"Error in detect function: {e}")
         return "Error", 0.0
