@@ -1,31 +1,24 @@
 from flask import Flask, render_template, request
 import os
-import requests
 from keras.models import load_model
 from detect import detect
+import urllib.request
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'static'
+
+# Path to store uploaded images
+UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-MODEL_PATH = 'model.h5'
-MODEL_URL = 'https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5'
+# Load model once on startup
+model_path = 'model.h5'
 
-# Ensure model is present or download it
-def download_model():
-    os.makedirs("model", exist_ok=True)
-    if not os.path.exists(MODEL_PATH):
-        print("Downloading model.h5 from GitHub Releases...")
-        response = requests.get(MODEL_URL, stream=True)
-        with open(MODEL_PATH, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        print("Model downloaded successfully.")
-    else:
-        print("Model already exists. Skipping download.")
-
-download_model()
-model = load_model(MODEL_PATH)
+# Check if model is already downloaded or exists in the directory
+if not os.path.exists(model_path):
+    MODEL_URL = 'https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5'
+    urllib.request.urlretrieve(MODEL_URL, model_path)
+    
+model = load_model(model_path)
 
 @app.route('/')
 def index():
@@ -40,12 +33,18 @@ def predict():
     if image.filename == '':
         return 'No selected file!', 400
 
+    # Save the image to a specific folder
     image_path = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
     image.save(image_path)
 
-    result, confidence = detect(image_path, model)
+    try:
+        # Call detect function from result.py for processing
+        result, confidence = detect(image_path, model)
 
-    return render_template('result.html', result=result, confidence=round(confidence*100, 2), image_path=image_path)
+        # Render the result page with the output
+        return render_template('result.html', result=result, confidence=round(confidence*100, 2), image_path=image_path)
+    except Exception as e:
+        return f"Error: {e}", 500
 
 if __name__ == '__main__':
     app.run(debug=True)
