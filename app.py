@@ -1,58 +1,62 @@
-from flask import Flask, request, jsonify, render_template
-from keras.models import load_model
+from flask import Flask, render_template, request, redirect, url_for
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing import image
 import numpy as np
 import os
-import requests
+from werkzeug.utils import secure_filename
 from PIL import Image
-import io
 
 app = Flask(__name__)
 
-MODEL_PATH = "model.h5"
-MODEL_URL = "https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5"
+# Paths
+MODEL_PATH = 'model.h5'
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# 🔽 Download model if it's not already present
-if not os.path.exists(MODEL_PATH):
-    print("🔄 Downloading model.h5...")
-    with open(MODEL_PATH, "wb") as f:
-        f.write(requests.get(MODEL_URL).content)
-    print("✅ model.h5 downloaded!")
-
-# ✅ Load model
+# Load model
 print("📦 Loading model...")
 model = load_model(MODEL_PATH)
 print("🚀 Model loaded successfully!")
 
-# 🔍 Preprocessing helper
-def preprocess_image(image):
-    img = image.resize((150, 150))  # Adjust to match your model's expected size
-    img = np.array(img) / 255.0
-    img = img.reshape(1, 150, 150, 3)
-    return img
-
-# 🏠 Home route
+# Home route
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
-# 📤 Prediction route
+# Prediction route
 @app.route('/predict', methods=['POST'])
 def predict():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded.'})
-    
-    file = request.files['file']
+    if 'image' not in request.files:
+        return "No file part", 400
+
+    file = request.files['image']
     if file.filename == '':
-        return jsonify({'error': 'No selected file.'})
-    
-    try:
-        image = Image.open(io.BytesIO(file.read()))
-        processed_image = preprocess_image(image)
-        prediction = model.predict(processed_image)
-        result = "Tumor Detected" if prediction[0][0] > 0.5 else "No Tumor Detected"
-        return jsonify({'prediction': result})
-    except Exception as e:
-        return jsonify({'error': str(e)})
+        return "No selected file", 400
+
+    filename = secure_filename(file.filename)
+    image_path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(image_path)
+
+    # Load image
+    img = Image.open(image_path).convert("RGB")
+    img = img.resize((224, 224))  # Match model input size
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = img_array / 255.0
+
+    # Make prediction
+    predictions = model.predict(img_array)
+    confidence = round(np.max(predictions) * 100, 2)
+    class_index = np.argmax(predictions)
+
+    # Class labels (you can change if needed)
+    class_labels = ['No Tumor', 'Tumor']
+    result = class_labels[class_index]
+
+    return render_template('result.html',
+                           result=result,
+                           confidence=confidence,
+                           image_path='/' + image_path)
 
 if __name__ == '__main__':
     app.run(debug=True)
