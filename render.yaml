@@ -1,7 +1,11 @@
 services:
   - type: web
-    name: brain-tumor-detection
+    name: brain-tumor-detector
     env: python
-    buildCommand: ""
+    buildCommand: |
+      pip install -r requirements.txt
+      curl -L -o model.h5 https://github.com/dhaaniverse/brain-tumor-detection/releases/download/v1.0/model.h5
     startCommand: gunicorn app:app
-    plan: free
+    envVars:
+      - key: FLASK_ENV
+        value: production
