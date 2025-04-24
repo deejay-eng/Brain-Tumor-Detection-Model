@@ -1,74 +1,53 @@
 import os
-
-UPLOAD_FOLDER = 'uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-
-from flask import Flask, request, jsonify, render_template
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from flask import Flask, render_template, request
+from werkzeug.utils import secure_filename
 import numpy as np
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing import image
 
-# Create uploads folder if it doesn't exist
-UPLOAD_FOLDER = 'uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# Create 'uploads' folder if it doesn't exist
+if not os.path.exists('uploads'):
+    os.makedirs('uploads')
 
-# Flask app setup
+# Initialize Flask app
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Load your models
-cnn_model = load_model('model/custom_cnn_model.h5')  # replace with actual path if different
-efficientnet_model = load_model('model/efficientnet_model.h5')  # replace with actual path if different
+# Load your trained model (assumes model.h5 is in the same directory as app.py)
+model = load_model('model.h5')
 
-# Define class labels
-class_labels = ['Glioma', 'Meningioma', 'No Tumor', 'Pituitary']
-
-# Function to preprocess the image
-def preprocess_image(image_path):
-    img = load_img(image_path, target_size=(224, 224))
-    img_array = img_to_array(img)
-    img_array = img_array / 255.0  # normalize
-    img_array = np.expand_dims(img_array, axis=0)
-    return img_array
-
-# Route for home page
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
-# Route for prediction
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'file' not in request.files:
-        return jsonify({'error': 'No file part in the request'}), 400
-
+        return 'No file uploaded', 400
+    
     file = request.files['file']
 
     if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+        return 'No file selected', 400
 
-    # Save the file to uploads folder
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-    file.save(filepath)
+    if file:
+        filename = secure_filename(file.filename)
+        file_path = os.path.join('uploads', filename)
+        file.save(file_path)
 
-    # Preprocess the image
-    image = preprocess_image(filepath)
+        # Load and preprocess the image
+        img = image.load_img(file_path, target_size=(224, 224))  # adjust size as per your model input
+        img_array = image.img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = img_array / 255.0  # normalize if model was trained this way
 
-    # Make predictions
-    cnn_prediction = cnn_model.predict(image)
-    efficientnet_prediction = efficientnet_model.predict(image)
+        # Predict using the model
+        prediction = model.predict(img_array)
 
-    # Get predicted labels
-    cnn_label = class_labels[np.argmax(cnn_prediction)]
-    efficientnet_label = class_labels[np.argmax(efficientnet_prediction)]
+        # Assuming binary classification — 1 for Tumor, 0 for No Tumor
+        result = 'Tumor Detected' if prediction[0][0] > 0.5 else 'No Tumor Detected'
+        return result
 
-    return jsonify({
-        'cnn_prediction': cnn_label,
-        'efficientnet_prediction': efficientnet_label
-    })
+    return 'File processing error', 500
 
 if __name__ == '__main__':
     app.run(debug=True)
