@@ -10,19 +10,22 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Ensure upload folder exists
+# Ensure uploads folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load model
+# Load the model
 MODEL_PATH = 'model.h5'
-model = load_model(MODEL_PATH)
-print("🚀 Model loaded successfully!")
+if os.path.exists(MODEL_PATH):
+    model = load_model(MODEL_PATH)
+    print("🚀 Model loaded successfully!")
+else:
+    raise FileNotFoundError("❌ model.h5 not found. Make sure it's downloaded correctly.")
 
 def predict_tumor(img_path):
     img = image.load_img(img_path, target_size=(150, 150))
     img_tensor = image.img_to_array(img)
     img_tensor = np.expand_dims(img_tensor, axis=0)
-    img_tensor /= 255.
+    img_tensor /= 255.0
 
     prediction = model.predict(img_tensor)[0][0]
     confidence = round(prediction * 100, 2) if prediction >= 0.5 else round((1 - prediction) * 100, 2)
@@ -34,7 +37,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
-def upload():
+def predict():
     if 'image' not in request.files:
         return redirect(request.url)
 
@@ -44,7 +47,7 @@ def upload():
 
     if file:
         filename = secure_filename(file.filename)
-        unique_filename = str(uuid.uuid4()) + "_" + filename
+        unique_filename = f"{uuid.uuid4()}_{filename}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
         file.save(filepath)
 
