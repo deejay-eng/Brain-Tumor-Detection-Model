@@ -10,16 +10,16 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Ensure uploads folder exists
+# Ensure upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load the model
-MODEL_PATH = 'model.h5'
+# Load model from model/model.h5
+MODEL_PATH = os.path.join('model', 'model.h5')
 if os.path.exists(MODEL_PATH):
     model = load_model(MODEL_PATH)
-    print("🚀 Model loaded successfully!")
+    print("✅ Model loaded successfully from:", MODEL_PATH)
 else:
-    raise FileNotFoundError("❌ model.h5 not found. Make sure it's downloaded correctly.")
+    raise FileNotFoundError("❌ model.h5 not found at 'model/model.h5'. Check preDeployCommand or file path.")
 
 def predict_tumor(img_path):
     img = image.load_img(img_path, target_size=(150, 150))
