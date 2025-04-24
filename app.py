@@ -8,9 +8,10 @@ from PIL import Image
 app = Flask(_name_)
 
 MODEL_PATH = 'model/model.h5'
-MODEL_URL = 'https://drive.google.com/uc?export=download&id=1JFkLRc-Hzy39KHlrqoR68vOdzwW-_uWh'
+MODEL_FILE_ID = '1JFkLRc-Hzy39KHlrqoR68vOdzwW-_uWh'
+MODEL_URL = f'https://drive.google.com/uc?export=download&id=https://drive.google.com/file/d/1JFkLRc-Hzy39KHlrqoR68vOdzwW-_uWh/view?usp=sharing'
 
-# Download model if not present
+# Download the model if it doesn't exist
 if not os.path.exists(MODEL_PATH):
     os.makedirs('model', exist_ok=True)
     print("Downloading model...")
@@ -19,7 +20,7 @@ if not os.path.exists(MODEL_PATH):
         f.write(response.content)
     print("Model downloaded.")
 
-# Load model
+# Load the model
 model = load_model(MODEL_PATH)
 
 @app.route('/')
@@ -37,7 +38,7 @@ def predict():
             return "No selected file"
         
         img = Image.open(file).convert('RGB')
-        img = img.resize((224, 224))  # Update this size as per your model input
+        img = img.resize((224, 224))  # Change if your model uses a different input size
         img_array = np.array(img) / 255.0
         img_array = np.expand_dims(img_array, axis=0)
         
