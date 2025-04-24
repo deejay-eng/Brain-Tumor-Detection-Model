@@ -1,50 +1,74 @@
-from flask import Flask, render_template, request
 import os
-from keras.models import load_model
-from detect import detect
-import urllib.request
 
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+
+from flask import Flask, request, jsonify, render_template
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+import numpy as np
+
+# Create uploads folder if it doesn't exist
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# Flask app setup
 app = Flask(__name__)
-
-# Path to store uploaded images
-UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Load model once on startup
-model_path = 'model.h5'
+# Load your models
+cnn_model = load_model('model/custom_cnn_model.h5')  # replace with actual path if different
+efficientnet_model = load_model('model/efficientnet_model.h5')  # replace with actual path if different
 
-# Check if model is already downloaded or exists in the directory
-if not os.path.exists(model_path):
-    MODEL_URL = 'https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5'
-    urllib.request.urlretrieve(MODEL_URL, model_path)
-    
-model = load_model(model_path)
+# Define class labels
+class_labels = ['Glioma', 'Meningioma', 'No Tumor', 'Pituitary']
 
+# Function to preprocess the image
+def preprocess_image(image_path):
+    img = load_img(image_path, target_size=(224, 224))
+    img_array = img_to_array(img)
+    img_array = img_array / 255.0  # normalize
+    img_array = np.expand_dims(img_array, axis=0)
+    return img_array
+
+# Route for home page
 @app.route('/')
-def index():
+def home():
     return render_template('index.html')
 
+# Route for prediction
 @app.route('/predict', methods=['POST'])
 def predict():
-    if 'image' not in request.files:
-        return 'No file uploaded!', 400
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
 
-    image = request.files['image']
-    if image.filename == '':
-        return 'No selected file!', 400
+    file = request.files['file']
 
-    # Save the image to a specific folder
-    image_path = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
-    image.save(image_path)
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
 
-    try:
-        # Call detect function from result.py for processing
-        result, confidence = detect(image_path, model)
-        return render_template('result.html', result=result, confidence=round(confidence * 100, 2), image_path=image_path)
-    except Exception as e:
-        # Print error to the console and show the error in the response
-        print(f"Error processing image: {e}")
-        return f"Error: {e}", 500
+    # Save the file to uploads folder
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    file.save(filepath)
+
+    # Preprocess the image
+    image = preprocess_image(filepath)
+
+    # Make predictions
+    cnn_prediction = cnn_model.predict(image)
+    efficientnet_prediction = efficientnet_model.predict(image)
+
+    # Get predicted labels
+    cnn_label = class_labels[np.argmax(cnn_prediction)]
+    efficientnet_label = class_labels[np.argmax(efficientnet_prediction)]
+
+    return jsonify({
+        'cnn_prediction': cnn_label,
+        'efficientnet_prediction': efficientnet_label
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
