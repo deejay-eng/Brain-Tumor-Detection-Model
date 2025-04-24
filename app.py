@@ -8,7 +8,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'static'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-MODEL_PATH = 'model/model.h5'
+MODEL_PATH = 'model.h5'
 MODEL_URL = 'https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5'
 
 # Ensure model is present or download it
