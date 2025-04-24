@@ -40,10 +40,10 @@ def predict():
     try:
         # Call detect function from result.py for processing
         result, confidence = detect(image_path, model)
-
-        # Render the result page with the output
-        return render_template('result.html', result=result, confidence=round(confidence*100, 2), image_path=image_path)
+        return render_template('result.html', result=result, confidence=round(confidence * 100, 2), image_path=image_path)
     except Exception as e:
+        # Print error to the console and show the error in the response
+        print(f"Error processing image: {e}")
         return f"Error: {e}", 500
 
 if __name__ == '__main__':
