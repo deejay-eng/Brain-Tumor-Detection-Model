@@ -10,3 +10,4 @@ services:
     preDeployCommand: |
       mkdir -p model
       curl -L $MODEL_URL -o model/model.h5
+
