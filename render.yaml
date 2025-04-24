@@ -3,11 +3,7 @@ services:
     name: brain-tumor-detection
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
-    envVars:
-      - key: MODEL_URL
-        value: https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5
-    preDeployCommand: |
+    startCommand: |
       mkdir -p model
-      curl -L $MODEL_URL -o model/model.h5
-
+      curl -L https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5 -o model/model.h5
+      gunicorn app:app
