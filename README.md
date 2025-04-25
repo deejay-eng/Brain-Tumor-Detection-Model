@@ -132,5 +132,3 @@ Result Image:
 ⭐ Feel free to check out my work and connect with me! If you like my portfolio, consider starring this repository!
 
 
-
-brain-tumor-detection/ │ ├── dataset/ # MRI Images (Tumor / No Tumor) ├── model/ # Saved .h5 trained model ├── static/ # Static files (for frontend if applicable) ├── templates/ # HTML templates ├── brain_tumor_cnn.ipynb # Jupyter notebook with full code ├── app.py # (Optional) Flask app (for UI) ├── requirements.txt # Dependencies └── README.md # Project documentation
