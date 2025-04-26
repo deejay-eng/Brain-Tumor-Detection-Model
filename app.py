@@ -4,7 +4,7 @@ from keras.models import load_model
 from detect import detect
 
 app = Flask(__name__)
-model = load_model('model.h5')
+model = load_model('model/model.h5')
 
 UPLOAD_FOLDER = 'static'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
