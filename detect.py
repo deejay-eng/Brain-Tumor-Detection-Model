@@ -1,7 +1,7 @@
 from keras.preprocessing.image import load_img, img_to_array
 import numpy as np
 
-class_labels = ['pituitary', 'glioma', 'notumor', 'meningioma']
+class_labels = ['pituitary', 'notumor', 'glioma', 'meningioma']
 
 def detect(img_path, model, image_size=128):
     try:
@@ -21,6 +21,4 @@ def detect(img_path, model, image_size=128):
         return result, confidence_score
 
     except Exception as e:
-        # Print detailed error to the console
-        print(f"Error in detect function: {e}")
         return "Error", 0.0
