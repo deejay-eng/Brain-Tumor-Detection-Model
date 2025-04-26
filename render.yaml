@@ -6,4 +6,4 @@ services:
     startCommand: |
       mkdir -p model
       curl -L https://github.com/kaanchiiii/Brain-Tumor-Detection-Model/releases/download/v1.0/model.h5 -o model/model.h5
-      gunicorn app:app
+      gunicorn --bind 0.0.0.0:$PORT app:app
