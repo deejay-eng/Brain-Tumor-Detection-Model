@@ -109,15 +109,15 @@ This project is intended for educational purposes only. It is not suitable for m
 
 ### 📸 Sample Output
 
-![image](https://github.com/user-attachments/assets/98f3b29e-8a2a-4028-957d-7c1818805dcb)
+![image](https://github.com/user-attachments/assets/2af02940-e99a-48b6-980b-1f07e6f66ee9)
 
 Tumor Image:
 
-![image](https://github.com/user-attachments/assets/e4b2069e-8a58-49f4-815f-d4a57be9671f)
+![image](https://github.com/user-attachments/assets/78cb37f8-badc-4966-86fb-d2f4b3a945b9)
 
 Result Image:
 
-![image](https://github.com/user-attachments/assets/07ea7b7f-02e7-402d-a360-62efb779c2b0)
+![image](https://github.com/user-attachments/assets/ebd477eb-a185-41ea-b3b2-3ae35fbd720f)
 
 --------
 
